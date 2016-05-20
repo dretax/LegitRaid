@@ -234,11 +234,12 @@ namespace LegitRaid
                 {
                     names.Add(x.name.ToLower());
                 }
-                if (names.Contains("shelter") && !names.Contains("door"))
+                string ncollected = string.Join(" ", names.ToArray());
+                if (ncollected.Contains("shelter") && !ncollected.Contains("door"))
                 {
                     return;
                 }
-                if (!names.Contains("meshbatch"))
+                if (!ncollected.Contains("meshbatch"))
                 {
                     return;
                 }
