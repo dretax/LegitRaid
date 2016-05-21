@@ -14,7 +14,9 @@ namespace LegitRaid
     public class LegitRaid : Fougerite.Module
     {
         public readonly Dictionary<ulong, int> OwnerTimeData = new Dictionary<ulong, int>();
+        public readonly Dictionary<ulong, int> RaiderTime = new Dictionary<ulong, int>();
         public int RaidTime = 20;
+        public int MaxRaidTime = 60;
         public bool AllowAllModerators = false;
         public bool RustPP = false;
         public bool CanOpenChestIfThereIsNoStructureClose = false;
@@ -65,6 +67,7 @@ namespace LegitRaid
                 File.Create(PathC).Dispose();
                 Settings = new IniParser(PathC);
                 Settings.AddSetting("Settings", "RaidTime", "20");
+                Settings.AddSetting("Settings", "MaxRaidTime", "60");
                 Settings.AddSetting("Settings", "AllowAllModerators", "False");
                 Settings.AddSetting("Settings", "CanOpenChestIfThereIsNoStructureClose", "True");
                 Settings.AddSetting("Settings", "DataStoreTables", "ExamplePluginDataStoreName,ExamplePluginDataStoreName2,ExamplePluginDataStoreName3");
@@ -75,6 +78,7 @@ namespace LegitRaid
             {
                 Settings = new IniParser(PathC);
                 RaidTime = int.Parse(Settings.GetSetting("Settings", "RaidTime"));
+                MaxRaidTime = int.Parse(Settings.GetSetting("Settings", "MaxRaidTime"));
                 AllowAllModerators = Settings.GetBoolSetting("Settings", "AllowAllModerators");
                 CanOpenChestIfThereIsNoStructureClose = Settings.GetBoolSetting("Settings", "CanOpenChestIfThereIsNoStructureClose");
                 var Collect = Settings.GetSetting("Settings", "WhiteListedIDs");
@@ -115,6 +119,7 @@ namespace LegitRaid
                 {
                     Settings = new IniParser(PathC);
                     RaidTime = int.Parse(Settings.GetSetting("Settings", "RaidTime"));
+                    MaxRaidTime = int.Parse(Settings.GetSetting("Settings", "MaxRaidTime"));
                     AllowAllModerators = Settings.GetBoolSetting("Settings", "AllowAllModerators");
                     CanOpenChestIfThereIsNoStructureClose = Settings.GetBoolSetting("Settings", "CanOpenChestIfThereIsNoStructureClose");
                     var Collect = Settings.GetSetting("Settings", "WhiteListedIDs");
@@ -204,10 +209,30 @@ namespace LegitRaid
         {
             if (de.Attacker != null && de.Entity != null && !de.IsDecay)
             {
-                if ((de.WeaponName.ToLower().Contains("explosive") || de.WeaponName.ToLower().Contains("grenade")) && (de.Entity.Name.ToLower().Contains("wall") || de.Entity.Name.ToLower().Contains("door")))
+                if (((Fougerite.Player) de.Attacker).UID == de.Entity.UOwnerID)
+                {
+                    return;
+                }
+                if ((de.WeaponName.ToLower().Contains("explosive") || de.WeaponName.ToLower().Contains("grenade") 
+                    || de.WeaponName.ToLower().Contains("hatchet") || de.WeaponName.ToLower().Contains("axe") 
+                    || de.WeaponName.ToLower().Contains("rock")) && (de.Entity.Name.ToLower().Contains("wall") 
+                    || de.Entity.Name.ToLower().Contains("door")))
                 {
                     Fougerite.Entity entity = de.Entity;
                     OwnerTimeData[entity.UOwnerID] = System.Environment.TickCount;
+                    if (RaiderTime.ContainsKey(entity.UOwnerID))
+                    {
+                        if (MaxRaidTime < RaiderTime[entity.UOwnerID] + RaidTime)
+                        {
+                            RaiderTime[entity.UOwnerID] = MaxRaidTime;
+                            return;
+                        }
+                        RaiderTime[entity.UOwnerID] = RaiderTime[entity.UOwnerID] + RaidTime;
+                    }
+                    else
+                    {
+                        RaiderTime[entity.UOwnerID] = RaidTime;
+                    }
                 }
             }
         }
@@ -227,7 +252,7 @@ namespace LegitRaid
             }
             if (CanOpenChestIfThereIsNoStructureClose)
             {
-                var objects = Physics.OverlapSphere(lootstartevent.Entity.Location, 5f);
+                var objects = Physics.OverlapSphere(lootstartevent.Entity.Location, 3.6f);
                 bool shelter = false;
                 var names = new List<string>();
                 foreach (var x in objects.Where(x => !names.Contains(x.name.ToLower())))
@@ -262,21 +287,36 @@ namespace LegitRaid
                 var id = lootstartevent.Entity.UOwnerID;
                 var ticks = OwnerTimeData[id];
                 var calc = System.Environment.TickCount - ticks;
+                int timeraid = RaidTime;
+                if (RaiderTime.ContainsKey(id))
+                {
+                    timeraid = RaiderTime[id];
+                }
                 if (calc < 0 || double.IsNaN(calc) || double.IsNaN(ticks))
                 {
                     lootstartevent.Cancel();
                     lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
                     lootstartevent.Player.MessageFrom("LegitRaid", orange + "If your friend owns the chest tell him to add you with /addfriend name");
                     lootstartevent.Player.MessageFrom("LegitRaid", orange + "After that tell him to type /friendraid !");
+                    lootstartevent.Player.MessageFrom("LegitRaid", orange + "Once that is done, reconnect to the server !");
                     OwnerTimeData.Remove(id);
+                    if (RaiderTime.ContainsKey(id))
+                    {
+                        RaiderTime.Remove(id);
+                    }
                 }
-                if (calc >= RaidTime * 60000)
+                if (calc >= (RaidTime + timeraid) * 60000)
                 {
                     lootstartevent.Cancel();
                     lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
                     lootstartevent.Player.MessageFrom("LegitRaid", orange + "If your friend owns the chest tell him to add you with /addfriend name");
                     lootstartevent.Player.MessageFrom("LegitRaid", orange + "After that tell him to type /friendraid !");
+                    lootstartevent.Player.MessageFrom("LegitRaid", orange + "Once that is done, reconnect to the server !");
                     OwnerTimeData.Remove(id);
+                    if (RaiderTime.ContainsKey(id))
+                    {
+                        RaiderTime.Remove(id);
+                    }
                 }
                 else
                 {
@@ -290,6 +330,7 @@ namespace LegitRaid
                 lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
                 lootstartevent.Player.MessageFrom("LegitRaid", orange + "If your friend owns the chest tell him to add you with /addfriend name");
                 lootstartevent.Player.MessageFrom("LegitRaid", orange + "After that tell him to type /friendraid !");
+                lootstartevent.Player.MessageFrom("LegitRaid", orange + "Once that is done, reconnect to the server !");
             }
         }
     }
