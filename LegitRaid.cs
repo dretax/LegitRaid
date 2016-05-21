@@ -193,10 +193,10 @@ namespace LegitRaid
                 if (he.Attacker != null && he.Entity != null)
                 {
                     Fougerite.Entity entity = he.Entity;
-                    if ((entity.Name.ToLower().Contains("box") || entity.Name.ToLower().Contains("stash")) 
-                        && !he.WeaponName.Contains("explosive") && !he.WeaponName.Contains("grenade") && !Guns.Contains(he.WeaponName))
+                    if (entity.Name.ToLower().Contains("box") || entity.Name.ToLower().Contains("stash"))
                     {
-                        if (!OwnerTimeData.ContainsKey(entity.UOwnerID))
+                        if (!he.WeaponName.Contains("explosive") && !he.WeaponName.Contains("grenade") &&
+                            !Guns.Contains(he.WeaponName) && !OwnerTimeData.ContainsKey(entity.UOwnerID))
                         {
                             he.DamageAmount = 0f;
                         }
@@ -298,7 +298,7 @@ namespace LegitRaid
                     lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
                     lootstartevent.Player.MessageFrom("LegitRaid", orange + "If your friend owns the chest tell him to add you with /addfriend name");
                     lootstartevent.Player.MessageFrom("LegitRaid", orange + "After that tell him to type /friendraid !");
-                    lootstartevent.Player.MessageFrom("LegitRaid", orange + "Once that is done, reconnect to the server !");
+                    //lootstartevent.Player.MessageFrom("LegitRaid", orange + "Once that is done, reconnect to the server !");
                     OwnerTimeData.Remove(id);
                     if (RaiderTime.ContainsKey(id))
                     {
@@ -311,7 +311,7 @@ namespace LegitRaid
                     lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
                     lootstartevent.Player.MessageFrom("LegitRaid", orange + "If your friend owns the chest tell him to add you with /addfriend name");
                     lootstartevent.Player.MessageFrom("LegitRaid", orange + "After that tell him to type /friendraid !");
-                    lootstartevent.Player.MessageFrom("LegitRaid", orange + "Once that is done, reconnect to the server !");
+                    //lootstartevent.Player.MessageFrom("LegitRaid", orange + "Once that is done, reconnect to the server !");
                     OwnerTimeData.Remove(id);
                     if (RaiderTime.ContainsKey(id))
                     {
@@ -330,7 +330,7 @@ namespace LegitRaid
                 lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
                 lootstartevent.Player.MessageFrom("LegitRaid", orange + "If your friend owns the chest tell him to add you with /addfriend name");
                 lootstartevent.Player.MessageFrom("LegitRaid", orange + "After that tell him to type /friendraid !");
-                lootstartevent.Player.MessageFrom("LegitRaid", orange + "Once that is done, reconnect to the server !");
+                //lootstartevent.Player.MessageFrom("LegitRaid", orange + "Once that is done, reconnect to the server !");
             }
         }
     }
