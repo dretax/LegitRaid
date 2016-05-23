@@ -321,7 +321,7 @@ namespace LegitRaid
                 else
                 {
                     var done = Math.Round((float)((calc / 1000) / 60));
-                    lootstartevent.Player.Notice("You can loot until: " + (RaidTime - done) + " minutes!");
+                    lootstartevent.Player.Notice("You can loot until: " + (timeraid - done) + " minutes!");
                 }
             }
             else
