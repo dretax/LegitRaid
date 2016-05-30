@@ -126,6 +126,8 @@ namespace LegitRaid
         public void OnServerSaved()
         {
             var instance = DataStore.GetInstance();
+            instance.Flush("LOwnerTimeData");
+            instance.Flush("LRaiderTime");
             foreach (var x in RaiderTime.Keys)
             {
                 instance.Add("LRaiderTime", x, RaiderTime[x]);
