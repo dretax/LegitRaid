@@ -54,7 +54,7 @@ namespace LegitRaid
 
         public override Version Version
         {
-            get { return new Version("1.0"); }
+            get { return new Version("1.2"); }
         }
 
         public override void Initialize()
@@ -94,11 +94,23 @@ namespace LegitRaid
                     DSNames.Add(x);
                 }
             }
+            var instance = DataStore.GetInstance();
+            foreach (var x in instance.Keys("LRaiderTime"))
+            {
+                RaiderTime[(ulong) x] = (int) instance.Get("LRaiderTime", x);
+            }
+            foreach (var x in instance.Keys("LOwnerTimeData"))
+            {
+                OwnerTimeData[(ulong) x] = (int) instance.Get("LOwnerTimeData", x);
+            }
+            instance.Flush("LOwnerTimeData");
+            instance.Flush("LRaiderTime");
             Fougerite.Hooks.OnLootUse += OnLootUse;
             Fougerite.Hooks.OnEntityDestroyed += OnEntityDestroyed;
             Fougerite.Hooks.OnEntityHurt += OnEntityHurt;
             Fougerite.Hooks.OnModulesLoaded += OnModulesLoaded;
             Fougerite.Hooks.OnCommand += OnCommand;
+            Fougerite.Hooks.OnServerSaved += OnServerSaved;
         }
 
         public override void DeInitialize()
@@ -108,6 +120,20 @@ namespace LegitRaid
             Fougerite.Hooks.OnEntityHurt -= OnEntityHurt;
             Fougerite.Hooks.OnModulesLoaded -= OnModulesLoaded;
             Fougerite.Hooks.OnCommand -= OnCommand;
+            Fougerite.Hooks.OnServerSaved -= OnServerSaved;
+        }
+
+        public void OnServerSaved()
+        {
+            var instance = DataStore.GetInstance();
+            foreach (var x in RaiderTime.Keys)
+            {
+                instance.Add("LRaiderTime", x, RaiderTime[x]);
+            }
+            foreach (var x in OwnerTimeData.Keys)
+            {
+                instance.Add("LOwnerTimeData", x, OwnerTimeData[x]);
+            }
         }
 
         public void OnCommand(Fougerite.Player player, string cmd, string[] args)
