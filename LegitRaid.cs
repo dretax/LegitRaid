@@ -13,8 +13,8 @@ namespace LegitRaid
 {
     public class LegitRaid : Fougerite.Module
     {
-        public readonly Dictionary<ulong, int> OwnerTimeData = new Dictionary<ulong, int>();
-        public readonly Dictionary<ulong, int> RaiderTime = new Dictionary<ulong, int>();
+        public Dictionary<ulong, int> OwnerTimeData;
+        public Dictionary<ulong, int> RaiderTime;
         public int RaidTime = 20;
         public int MaxRaidTime = 60;
         public bool AllowAllModerators = false;
@@ -62,6 +62,8 @@ namespace LegitRaid
             if (!File.Exists(Path.Combine(ModuleFolder, "Logs.log"))) { File.Create(Path.Combine(ModuleFolder, "Logs.log")).Dispose(); }
             PathLog = Path.Combine(ModuleFolder, "Logs.log");
             PathC = Path.Combine(ModuleFolder, "Settings.ini");
+            RaiderTime = new Dictionary<ulong, int>();
+            OwnerTimeData = new Dictionary<ulong, int>();
             if (!File.Exists(PathC))
             {
                 File.Create(PathC).Dispose();
@@ -94,17 +96,6 @@ namespace LegitRaid
                     DSNames.Add(x);
                 }
             }
-            var instance = DataStore.GetInstance();
-            foreach (var x in instance.Keys("LRaiderTime"))
-            {
-                RaiderTime[(ulong) x] = (int) instance.Get("LRaiderTime", x);
-            }
-            foreach (var x in instance.Keys("LOwnerTimeData"))
-            {
-                OwnerTimeData[(ulong) x] = (int) instance.Get("LOwnerTimeData", x);
-            }
-            instance.Flush("LOwnerTimeData");
-            instance.Flush("LRaiderTime");
             Fougerite.Hooks.OnLootUse += OnLootUse;
             Fougerite.Hooks.OnEntityDestroyed += OnEntityDestroyed;
             Fougerite.Hooks.OnEntityHurt += OnEntityHurt;
@@ -212,6 +203,37 @@ namespace LegitRaid
         public void OnModulesLoaded()
         {
             RustPP = Fougerite.Server.GetServer().HasRustPP;
+            var instance = DataStore.GetInstance();
+            if (instance.GetTable("LRaiderTime") != null)
+            {
+                foreach (var x in instance.Keys("LRaiderTime"))
+                {
+                    try
+                    {
+                        RaiderTime[(ulong) x] = (int) instance.Get("LRaiderTime", x);
+                    }
+                    catch
+                    {
+
+                    }
+                }
+            }
+            if (instance.GetTable("LOwnerTimeData") != null)
+            {
+                foreach (var x in instance.Keys("LOwnerTimeData"))
+                {
+                    try
+                    {
+                        OwnerTimeData[(ulong) x] = (int) instance.Get("LOwnerTimeData", x);
+                    }
+                    catch
+                    {
+
+                    }
+                }
+            }
+            instance.Flush("LOwnerTimeData");
+            instance.Flush("LRaiderTime");
         }
 
         public void OnEntityHurt(HurtEvent he)
