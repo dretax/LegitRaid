@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using Fougerite;
 using Fougerite.Events;
 using RustPP.Social;
 using UnityEngine;
-using Player = Fougerite.Player;
 
 namespace LegitRaid
 {
@@ -20,6 +18,7 @@ namespace LegitRaid
         public bool AllowAllModerators = false;
         public bool RustPP = false;
         public bool CanOpenChestIfThereIsNoStructureClose = false;
+        public bool AutoWhiteListFriends = false;
         public readonly List<string> WhiteListedIDs = new List<string>();
         public readonly List<string> DSNames = new List<string>();
         public readonly IEnumerable<string> Guns = new string[]
@@ -54,7 +53,7 @@ namespace LegitRaid
 
         public override Version Version
         {
-            get { return new Version("1.2"); }
+            get { return new Version("1.2.1"); }
         }
 
         public override void Initialize()
@@ -74,6 +73,7 @@ namespace LegitRaid
                 Settings.AddSetting("Settings", "CanOpenChestIfThereIsNoStructureClose", "True");
                 Settings.AddSetting("Settings", "DataStoreTables", "ExamplePluginDataStoreName,ExamplePluginDataStoreName2,ExamplePluginDataStoreName3");
                 Settings.AddSetting("Settings", "WhiteListedIDs", "76561197967414xxx,76561197961635xxx,76561197961634xxx");
+                Settings.AddSetting("Settings", "AutoWhiteListFriends", "False");
                 Settings.Save();
             }
             else
@@ -83,6 +83,7 @@ namespace LegitRaid
                 MaxRaidTime = int.Parse(Settings.GetSetting("Settings", "MaxRaidTime"));
                 AllowAllModerators = Settings.GetBoolSetting("Settings", "AllowAllModerators");
                 CanOpenChestIfThereIsNoStructureClose = Settings.GetBoolSetting("Settings", "CanOpenChestIfThereIsNoStructureClose");
+                AutoWhiteListFriends = Settings.GetBoolSetting("Settings", "AutoWhiteListFriends");
                 var Collect = Settings.GetSetting("Settings", "WhiteListedIDs");
                 var splits = Collect.Split(Convert.ToChar(","));
                 foreach (var x in splits)
@@ -141,6 +142,7 @@ namespace LegitRaid
                     MaxRaidTime = int.Parse(Settings.GetSetting("Settings", "MaxRaidTime"));
                     AllowAllModerators = Settings.GetBoolSetting("Settings", "AllowAllModerators");
                     CanOpenChestIfThereIsNoStructureClose = Settings.GetBoolSetting("Settings", "CanOpenChestIfThereIsNoStructureClose");
+                    AutoWhiteListFriends = Settings.GetBoolSetting("Settings", "AutoWhiteListFriends");
                     var Collect = Settings.GetSetting("Settings", "WhiteListedIDs");
                     var splits = Collect.Split(Convert.ToChar(","));
                     WhiteListedIDs.Clear();
@@ -159,8 +161,9 @@ namespace LegitRaid
             }
             else if (cmd == "friendraid")
             {
-                if (!RustPP)
+                if (!RustPP || AutoWhiteListFriends)
                 {
+                    player.MessageFrom("LegitRaid", "Friends are AutoWhitelisted on this Server.");
                     return;
                 }
                 bool contains = DataStore.GetInstance().ContainsKey("LegitRaid", player.UID);
@@ -302,8 +305,7 @@ namespace LegitRaid
             }
             if (CanOpenChestIfThereIsNoStructureClose)
             {
-                var objects = Physics.OverlapSphere(lootstartevent.Entity.Location, 3.6f);
-                bool shelter = false;
+                var objects = Physics.OverlapSphere(lootstartevent.Entity.Location, 3.8f);
                 var names = new List<string>();
                 foreach (var x in objects.Where(x => !names.Contains(x.name.ToLower())))
                 {
@@ -326,7 +328,7 @@ namespace LegitRaid
                 { 
                     var fs = (RustPP.Social.FriendList) friendc[lootstartevent.Entity.UOwnerID];
                     bool isfriend = fs.Cast<FriendList.Friend>().Any(friend => friend.GetUserID() == lootstartevent.Player.UID);
-                    if (isfriend && DataStore.GetInstance().Get("LegitRaid", lootstartevent.Entity.UOwnerID) != null)
+                    if ((isfriend && DataStore.GetInstance().Get("LegitRaid", lootstartevent.Entity.UOwnerID) != null) || (isfriend && AutoWhiteListFriends))
                     {
                         return;
                     }
@@ -348,7 +350,6 @@ namespace LegitRaid
                     lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
                     lootstartevent.Player.MessageFrom("LegitRaid", orange + "If your friend owns the chest tell him to add you with /addfriend name");
                     lootstartevent.Player.MessageFrom("LegitRaid", orange + "After that tell him to type /friendraid !");
-                    //lootstartevent.Player.MessageFrom("LegitRaid", orange + "Once that is done, reconnect to the server !");
                     OwnerTimeData.Remove(id);
                     if (RaiderTime.ContainsKey(id))
                     {
@@ -361,7 +362,6 @@ namespace LegitRaid
                     lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
                     lootstartevent.Player.MessageFrom("LegitRaid", orange + "If your friend owns the chest tell him to add you with /addfriend name");
                     lootstartevent.Player.MessageFrom("LegitRaid", orange + "After that tell him to type /friendraid !");
-                    //lootstartevent.Player.MessageFrom("LegitRaid", orange + "Once that is done, reconnect to the server !");
                     OwnerTimeData.Remove(id);
                     if (RaiderTime.ContainsKey(id))
                     {
@@ -380,7 +380,6 @@ namespace LegitRaid
                 lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
                 lootstartevent.Player.MessageFrom("LegitRaid", orange + "If your friend owns the chest tell him to add you with /addfriend name");
                 lootstartevent.Player.MessageFrom("LegitRaid", orange + "After that tell him to type /friendraid !");
-                //lootstartevent.Player.MessageFrom("LegitRaid", orange + "Once that is done, reconnect to the server !");
             }
         }
     }
