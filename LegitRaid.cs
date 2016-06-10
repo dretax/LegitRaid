@@ -53,7 +53,7 @@ namespace LegitRaid
 
         public override Version Version
         {
-            get { return new Version("1.2.1"); }
+            get { return new Version("1.2.2"); }
         }
 
         public override void Initialize()
@@ -103,16 +103,85 @@ namespace LegitRaid
             Fougerite.Hooks.OnModulesLoaded += OnModulesLoaded;
             Fougerite.Hooks.OnCommand += OnCommand;
             Fougerite.Hooks.OnServerSaved += OnServerSaved;
+            Fougerite.Hooks.OnEntityDeployedWithPlacer += OnEntityDeployedWithPlacer;
         }
 
         public override void DeInitialize()
         {
             Fougerite.Hooks.OnLootUse -= OnLootUse;
             Fougerite.Hooks.OnEntityDestroyed -= OnEntityDestroyed;
+            Fougerite.Hooks.OnEntityDeployedWithPlacer -= OnEntityDeployedWithPlacer;
             Fougerite.Hooks.OnEntityHurt -= OnEntityHurt;
             Fougerite.Hooks.OnModulesLoaded -= OnModulesLoaded;
             Fougerite.Hooks.OnCommand -= OnCommand;
             Fougerite.Hooks.OnServerSaved -= OnServerSaved;
+        }
+
+        public void OnEntityDeployedWithPlacer(Fougerite.Player player, Entity e, Fougerite.Player actualplacer)
+        {
+            if (actualplacer == null || e == null)
+            {
+                return;
+            }
+            if (!e.Name.ToLower().Contains("storage") && !e.Name.ToLower().Contains("stash"))
+            {
+                return;
+            }
+            var id = GetHouseOwner(e);
+            if (id == 0)
+            {
+                return;
+            }
+            if (actualplacer.UID != id)
+            {
+                if (DataStore.GetInstance().Get("LegitRaidED", id) != null)
+                {
+                    List<string> list = (List<string>) DataStore.GetInstance().Get("LegitRaidED", id);
+                    if (!list.Contains(actualplacer.SteamID))
+                    {
+                        list.Add(actualplacer.SteamID);
+                    }
+                    DataStore.GetInstance().Add("LegitRaidED", id, list);
+                }
+                else
+                {
+                    List<string> list = new List<string>();
+                    list.Add(actualplacer.SteamID);
+                    DataStore.GetInstance().Add("LegitRaidED", id, list);
+                }
+            }
+        }
+
+        public ulong GetHouseOwner(Entity e)
+        {
+            RaycastHit cachedRaycast;
+            StructureComponent cachedStructure;
+            Collider cachedCollider;
+            StructureMaster cachedMaster;
+            Facepunch.MeshBatch.MeshBatchInstance cachedhitInstance;
+            bool cachedBoolean;
+            var entitypos = e.Location;
+            if (!Facepunch.MeshBatch.MeshBatchPhysics.Raycast(new Ray(entitypos, new Vector3(0f, -1f, 0f)),
+                out cachedRaycast, out cachedBoolean, out cachedhitInstance))
+            {
+                return 0;
+            }
+            if (cachedhitInstance != null)
+            {
+                cachedCollider = cachedhitInstance.physicalColliderReferenceOnly;
+                if (cachedCollider == null)
+                {
+                    return 0;
+                }
+                cachedStructure = cachedCollider.GetComponent<StructureComponent>();
+                if (cachedStructure != null && cachedStructure._master != null)
+                {
+                    cachedMaster = cachedStructure._master;
+                    var id = cachedMaster.ownerID;
+                    return id;
+                }
+            }
+            return 0;
         }
 
         public void OnServerSaved()
@@ -157,6 +226,14 @@ namespace LegitRaid
                         DSNames.Add(x);
                     }
                     player.MessageFrom("LegitRaid", "Reloaded!");
+                }
+            }
+            else if (cmd == "flushlegita")
+            {
+                if (player.Admin)
+                {
+                    DataStore.GetInstance().Flush("LegitRaidED");
+                    player.MessageFrom("LegitRaid", "Flushed!");
                 }
             }
             else if (cmd == "friendraid")
@@ -376,6 +453,51 @@ namespace LegitRaid
             }
             else
             {
+                var id = GetHouseOwner(lootstartevent.Entity);
+                if (DataStore.GetInstance().Get("LegitRaidED", id) != null)
+                {
+                    List<string> list = (List<string>)DataStore.GetInstance().Get("LegitRaidED", id);
+                    if (list.Contains(lootstartevent.Entity.OwnerID) && OwnerTimeData.ContainsKey(id))
+                    {
+                        var ticks = OwnerTimeData[id];
+                        var calc = System.Environment.TickCount - ticks;
+                        int timeraid = RaidTime;
+                        if (RaiderTime.ContainsKey(id))
+                        {
+                            timeraid = RaiderTime[id];
+                        }
+                        if (calc < 0 || double.IsNaN(calc) || double.IsNaN(ticks))
+                        {
+                            lootstartevent.Cancel();
+                            lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
+                            lootstartevent.Player.MessageFrom("LegitRaid", orange + "If your friend owns the chest tell him to add you with /addfriend name");
+                            lootstartevent.Player.MessageFrom("LegitRaid", orange + "After that tell him to type /friendraid !");
+                            OwnerTimeData.Remove(id);
+                            if (RaiderTime.ContainsKey(id))
+                            {
+                                RaiderTime.Remove(id);
+                            }
+                        }
+                        if (calc >= (RaidTime + timeraid) * 60000)
+                        {
+                            lootstartevent.Cancel();
+                            lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
+                            lootstartevent.Player.MessageFrom("LegitRaid", orange + "If your friend owns the chest tell him to add you with /addfriend name");
+                            lootstartevent.Player.MessageFrom("LegitRaid", orange + "After that tell him to type /friendraid !");
+                            OwnerTimeData.Remove(id);
+                            if (RaiderTime.ContainsKey(id))
+                            {
+                                RaiderTime.Remove(id);
+                            }
+                        }
+                        else
+                        {
+                            var done = Math.Round((float)((calc / 1000) / 60));
+                            lootstartevent.Player.Notice("You can loot until: " + (timeraid - done) + " minutes!");
+                        }
+                        return;
+                    }
+                }
                 lootstartevent.Cancel();
                 lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
                 lootstartevent.Player.MessageFrom("LegitRaid", orange + "If your friend owns the chest tell him to add you with /addfriend name");

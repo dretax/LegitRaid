@@ -39,6 +39,9 @@
     <Reference Include="Facepunch.ID">
       <HintPath>References\Facepunch.ID.dll</HintPath>
     </Reference>
+    <Reference Include="Facepunch.MeshBatch">
+      <HintPath>E:\Users\DreTaX\Documents\Visual Studio 2013\Projects\FougeriteProject\References\Facepunch.MeshBatch.dll</HintPath>
+    </Reference>
     <Reference Include="Fougerite">
       <HintPath>References\Fougerite.dll</HintPath>
     </Reference>
