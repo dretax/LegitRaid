@@ -11,7 +11,7 @@ namespace LegitRaid
 {
     public class LegitRaid : Fougerite.Module
     {
-        public Dictionary<ulong, int> OwnerTimeData;
+        public Dictionary<ulong, double> OwnerTimeData;
         public Dictionary<ulong, int> RaiderTime;
         public int RaidTime = 20;
         public int MaxRaidTime = 60;
@@ -53,7 +53,7 @@ namespace LegitRaid
 
         public override Version Version
         {
-            get { return new Version("1.2.2"); }
+            get { return new Version("1.2.3"); }
         }
 
         public override void Initialize()
@@ -62,7 +62,7 @@ namespace LegitRaid
             PathLog = Path.Combine(ModuleFolder, "Logs.log");
             PathC = Path.Combine(ModuleFolder, "Settings.ini");
             RaiderTime = new Dictionary<ulong, int>();
-            OwnerTimeData = new Dictionary<ulong, int>();
+            OwnerTimeData = new Dictionary<ulong, double>();
             if (!File.Exists(PathC))
             {
                 File.Create(PathC).Dispose();
@@ -304,7 +304,7 @@ namespace LegitRaid
                 {
                     try
                     {
-                        OwnerTimeData[(ulong) x] = (int) instance.Get("LOwnerTimeData", x);
+                        OwnerTimeData[(ulong) x] = (double) instance.Get("LOwnerTimeData", x);
                     }
                     catch
                     {
@@ -349,7 +349,7 @@ namespace LegitRaid
                     || de.Entity.Name.ToLower().Contains("door")))
                 {
                     Fougerite.Entity entity = de.Entity;
-                    OwnerTimeData[entity.UOwnerID] = System.Environment.TickCount;
+                    OwnerTimeData[entity.UOwnerID] = TimeSpan.FromTicks(DateTime.Now.Ticks).TotalSeconds;
                     if (RaiderTime.ContainsKey(entity.UOwnerID))
                     {
                         if (MaxRaidTime < RaiderTime[entity.UOwnerID] + RaidTime)
@@ -369,6 +369,10 @@ namespace LegitRaid
 
         public void OnLootUse(LootStartEvent lootstartevent)
         {
+            if (lootstartevent.Player == null)
+            {
+                return;
+            }
             if (!lootstartevent.IsObject || DataStore.GetInstance().ContainsKey("LegitRaidA", lootstartevent.Player.UID)
                 || DataStore.GetInstance().ContainsKey("HGIG", lootstartevent.Player.SteamID)) {return;}
             if (DSNames.Any(table => DataStore.GetInstance().ContainsKey(table, lootstartevent.Player.SteamID) ||
@@ -415,13 +419,13 @@ namespace LegitRaid
             {
                 var id = lootstartevent.Entity.UOwnerID;
                 var ticks = OwnerTimeData[id];
-                var calc = System.Environment.TickCount - ticks;
+                var calc = TimeSpan.FromTicks(DateTime.Now.Ticks).TotalSeconds - ticks;
                 int timeraid = RaidTime;
                 if (RaiderTime.ContainsKey(id))
                 {
                     timeraid = RaiderTime[id];
                 }
-                if (calc < 0 || double.IsNaN(calc) || double.IsNaN(ticks))
+                if (double.IsNaN(calc) || double.IsNaN(ticks))
                 {
                     lootstartevent.Cancel();
                     lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
@@ -433,7 +437,7 @@ namespace LegitRaid
                         RaiderTime.Remove(id);
                     }
                 }
-                if (calc >= (RaidTime + timeraid) * 60000)
+                if (calc >= (RaidTime + timeraid) * 60)
                 {
                     lootstartevent.Cancel();
                     lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
@@ -447,8 +451,8 @@ namespace LegitRaid
                 }
                 else
                 {
-                    var done = Math.Round((float)((calc / 1000) / 60));
-                    lootstartevent.Player.Notice("You can loot until: " + (timeraid - done) + " minutes!");
+                    var done = Math.Round(calc);
+                    lootstartevent.Player.Notice("You can loot until: " + ((timeraid * 60) - done) + " seconds!");
                 }
             }
             else
@@ -460,13 +464,13 @@ namespace LegitRaid
                     if (list.Contains(lootstartevent.Entity.OwnerID) && OwnerTimeData.ContainsKey(id))
                     {
                         var ticks = OwnerTimeData[id];
-                        var calc = System.Environment.TickCount - ticks;
+                        var calc = TimeSpan.FromTicks(DateTime.Now.Ticks).TotalSeconds - ticks;
                         int timeraid = RaidTime;
                         if (RaiderTime.ContainsKey(id))
                         {
                             timeraid = RaiderTime[id];
                         }
-                        if (calc < 0 || double.IsNaN(calc) || double.IsNaN(ticks))
+                        if (double.IsNaN(calc) || double.IsNaN(ticks))
                         {
                             lootstartevent.Cancel();
                             lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
@@ -478,7 +482,7 @@ namespace LegitRaid
                                 RaiderTime.Remove(id);
                             }
                         }
-                        if (calc >= (RaidTime + timeraid) * 60000)
+                        if (calc >= (RaidTime + timeraid) * 60)
                         {
                             lootstartevent.Cancel();
                             lootstartevent.Player.Notice("", "You need to use C4/Grenade on wall and raid within " + RaidTime + " mins!", 8f);
@@ -492,8 +496,8 @@ namespace LegitRaid
                         }
                         else
                         {
-                            var done = Math.Round((float)((calc / 1000) / 60));
-                            lootstartevent.Player.Notice("You can loot until: " + (timeraid - done) + " minutes!");
+                            var done = Math.Round(calc);
+                            lootstartevent.Player.Notice("You can loot until: " + ((timeraid * 60) - done) + " seconds!");
                         }
                         return;
                     }
